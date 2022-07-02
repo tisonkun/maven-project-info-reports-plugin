@@ -233,7 +233,7 @@ public class TeamReport extends AbstractProjectInfoReport {
                     if (id == null) {
                         tableCell(null);
                     } else {
-                        tableCell("<a name=\"" + id + "\"></a>" + id, true);
+                        tableCell("<a id=\"" + id + "\"></a>" + id, true);
                     }
                 }
             }

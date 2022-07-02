@@ -44,7 +44,7 @@ public class DependenciesReportTest extends AbstractProjectInfoTestCase {
      * @throws Exception if any
      */
     public void testReport() throws Exception {
-        generateReport("dependencies", "dependencies-plugin-config.xml");
+        generateReport(getGoal(), "dependencies-plugin-config.xml");
         assertTrue(
                 "Test html generated", getGeneratedReport("dependencies.html").exists());
 
@@ -82,5 +82,10 @@ public class DependenciesReportTest extends AbstractProjectInfoTestCase {
         assertEquals(getString("report.dependencies.graph.title"), textBlocks[5].getText());
         assertEquals(getString("report.dependencies.graph.tree.title"), textBlocks[6].getText());
         assertEquals(getString("report.dependencies.graph.tables.licenses"), textBlocks[7].getText());
+    }
+
+    @Override
+    protected String getGoal() {
+        return "dependencies";
     }
 }

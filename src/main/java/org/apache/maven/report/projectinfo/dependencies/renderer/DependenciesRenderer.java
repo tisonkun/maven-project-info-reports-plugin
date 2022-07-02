@@ -42,7 +42,6 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.doxia.sink.SinkEventAttributes;
 import org.apache.maven.doxia.sink.impl.SinkEventAttributeSet;
-import org.apache.maven.doxia.util.HtmlTools;
 import org.apache.maven.model.License;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
@@ -92,11 +91,6 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
 
     /** Used to format file length values */
     private final DecimalFormat fileLengthDecimalFormat;
-
-    /**
-     * @since 2.1.1
-     */
-    private int section;
 
     /** Counter for unique IDs that is consistent across generations. */
     private int idCounter = 0;
@@ -231,117 +225,6 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
     }
 
     // ----------------------------------------------------------------------
-    // Protected methods
-    // ----------------------------------------------------------------------
-
-    /** {@inheritDoc} */
-    // workaround for MPIR-140
-    // TODO Remove me when MSHARED-390 has been resolved
-    @Override
-    protected void startSection(String name) {
-        startSection(name, name);
-    }
-
-    /**
-     * Start section with a name and a specific anchor.
-     *
-     * @param anchor not null
-     * @param name not null
-     */
-    // TODO Remove me when MSHARED-390 has been resolved
-    protected void startSection(String anchor, String name) {
-        section = section + 1;
-
-        super.sink.anchor(HtmlTools.encodeId(anchor));
-        super.sink.anchor_();
-
-        switch (section) {
-            case 1:
-                sink.section1();
-                sink.sectionTitle1();
-                break;
-            case 2:
-                sink.section2();
-                sink.sectionTitle2();
-                break;
-            case 3:
-                sink.section3();
-                sink.sectionTitle3();
-                break;
-            case 4:
-                sink.section4();
-                sink.sectionTitle4();
-                break;
-            case 5:
-                sink.section5();
-                sink.sectionTitle5();
-                break;
-
-            default:
-                // TODO: warning - just don't start a section
-                break;
-        }
-
-        text(name);
-
-        switch (section) {
-            case 1:
-                sink.sectionTitle1_();
-                break;
-            case 2:
-                sink.sectionTitle2_();
-                break;
-            case 3:
-                sink.sectionTitle3_();
-                break;
-            case 4:
-                sink.sectionTitle4_();
-                break;
-            case 5:
-                sink.sectionTitle5_();
-                break;
-
-            default:
-                // TODO: warning - just don't start a section
-                break;
-        }
-    }
-
-    /** {@inheritDoc} */
-    // workaround for MPIR-140
-    // TODO Remove me when MSHARED-390 has been resolved
-    @Override
-    protected void endSection() {
-        switch (section) {
-            case 1:
-                sink.section1_();
-                break;
-            case 2:
-                sink.section2_();
-                break;
-            case 3:
-                sink.section3_();
-                break;
-            case 4:
-                sink.section4_();
-                break;
-            case 5:
-                sink.section5_();
-                break;
-
-            default:
-                // TODO: warning - just don't start a section
-                break;
-        }
-
-        section = section - 1;
-
-        if (section < 0) {
-            throw new IllegalStateException("Too many closing sections");
-        }
-    }
-
-    // ----------------------------------------------------------------------
     // Private methods
     // ----------------------------------------------------------------------
 
@@ -436,7 +319,7 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
         PrintWriter pw = new PrintWriter(sw);
 
         pw.println("");
-        pw.println("<script language=\"javascript\" type=\"text/javascript\">");
+        pw.println("<script>");
         pw.println("      function toggleDependencyDetails( divId, imgId )");
         pw.println("      {");
         pw.println("        var div = document.getElementById( divId );");
@@ -701,7 +584,7 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
             String anchorByScope = (isTransitive
                     ? getI18nString("transitive.title") + "_" + scope
                     : getI18nString("title") + "_" + scope);
-            startSection(anchorByScope, scope);
+            startSection(scope, anchorByScope);
 
             paragraph(getI18nString("intro." + scope));
 
@@ -849,8 +732,7 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
 
                 List<License> licenses = artifactProject.getLicenses();
 
-                sink.table();
-                sink.tableRows(null, false);
+                startTable();
 
                 sink.tableRow();
                 sink.tableHeaderCell();
@@ -931,8 +813,7 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
                 sink.tableCell_();
                 sink.tableRow_();
 
-                sink.tableRows_();
-                sink.table_();
+                endTable();
             } catch (ProjectBuildingException e) {
                 sink.text(getI18nString("index", "nodescription"));
                 if (log.isDebugEnabled()) {
@@ -945,8 +826,7 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
                 }
             }
         } else {
-            sink.table();
-            sink.tableRows(null, false);
+            startTable();
 
             sink.tableRow();
             sink.tableHeaderCell();
@@ -976,8 +856,7 @@ public class DependenciesRenderer extends AbstractProjectInfoRenderer {
             sink.tableCell_();
             sink.tableRow_();
 
-            sink.tableRows_();
-            sink.table_();
+            endTable();
         }
 
         sink.rawText("</div>");

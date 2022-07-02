@@ -28,7 +28,7 @@ under the License.
   </parent>
 
   <artifactId>maven-project-info-reports-plugin</artifactId>
-  <version>3.4.4-SNAPSHOT</version>
+  <version>4.0.0-M1-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
   <name>Apache Maven Project Info Reports Plugin</name>
@@ -114,14 +114,15 @@ under the License.
   </distributionManagement>
 
   <properties>
-    <doxiaVersion>1.11.1</doxiaVersion>
-    <doxia-sitetoolsVersion>1.11.1</doxia-sitetoolsVersion>
+    <javaVersion>8</javaVersion>
+    <doxiaVersion>2.0.0-M6</doxiaVersion>
+    <doxiaSitetoolsVersion>2.0.0-M10</doxiaSitetoolsVersion>
     <mavenVersion>3.2.5</mavenVersion>
     <scmVersion>1.13.0</scmVersion>
     <aetherVersion>1.0.0.v20140518</aetherVersion>
-    <sitePluginVersion>3.12.1</sitePluginVersion>
-    <fluidoSkinVersion>1.11.1</fluidoSkinVersion>
-    <surefire.version>2.22.2</surefire.version>
+    <sitePluginVersion>4.0.0-M8</sitePluginVersion>
+    <fluidoSkinVersion>2.0.0-M6</fluidoSkinVersion>
+    <surefire.version>3.0.0</surefire.version>
     <checkstyle.violation.ignore>ParameterNumber,MethodLength</checkstyle.violation.ignore>
     <project.build.outputTimestamp>2023-04-15T14:36:20Z</project.build.outputTimestamp>
   </properties>
@@ -130,12 +131,12 @@ under the License.
     <dependency>
       <groupId>org.apache.maven.reporting</groupId>
       <artifactId>maven-reporting-api</artifactId>
-      <version>3.1.1</version>
+      <version>4.0.0-M6</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.reporting</groupId>
       <artifactId>maven-reporting-impl</artifactId>
-      <version>3.2.0</version>
+      <version>4.0.0-M8</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.maven</groupId>
@@ -322,56 +323,18 @@ under the License.
       <groupId>org.apache.maven.doxia</groupId>
       <artifactId>doxia-sink-api</artifactId>
       <version>${doxiaVersion}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.plexus</groupId>
-          <artifactId>plexus-container-default</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.doxia</groupId>
       <artifactId>doxia-core</artifactId>
       <version>${doxiaVersion}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.plexus</groupId>
-          <artifactId>plexus-container-default</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <!-- Doxia Sitetools -->
     <dependency>
       <groupId>org.apache.maven.doxia</groupId>
-      <artifactId>doxia-decoration-model</artifactId>
-      <version>${doxia-sitetoolsVersion}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.doxia</groupId>
-      <artifactId>doxia-site-renderer</artifactId>
-      <version>${doxia-sitetoolsVersion}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.plexus</groupId>
-          <artifactId>plexus-container-default</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.plexus</groupId>
-          <artifactId>plexus-component-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.maven.doxia</groupId>
       <artifactId>doxia-integration-tools</artifactId>
-      <version>${doxia-sitetoolsVersion}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.codehaus.plexus</groupId>
-          <artifactId>plexus-container-default</artifactId>
-        </exclusion>
-      </exclusions>
+      <version>${doxiaSitetoolsVersion}</version>
     </dependency>
 
     <!-- Plexus -->
@@ -389,7 +352,7 @@ under the License.
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
-      <version>3.4.2</version>
+      <version>3.5.1</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
@@ -461,7 +424,7 @@ under the License.
     <dependency>
       <groupId>org.apache.maven.wagon</groupId>
       <artifactId>wagon-http-lightweight</artifactId>
-      <version>3.5.1</version>
+      <version>3.5.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -523,6 +486,12 @@ under the License.
             <exclude>**/DependenciesReportTest*</exclude>
             <!-- FIXME: missing Maven 3 class or conflict -->
           </excludes>
+          <systemPropertyVariables>
+            <!-- NOTE: This is unfortunately required because httpunit forces 'file.encoding' onto all
+              file URLs without the option to read 'charset' from <meta /> or to override explicitly:
+              https://github.com/kohsuke/httpunit/blob/a2841fd31fbf3bc234bea02f6bd18a87f5ec6574/src/com/meterware/httpunit/HttpWebResponse.java#L240-L245 -->
+            <file.encoding>UTF-8</file.encoding>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <!-- To use Jetty SSL in tests -->
@@ -586,6 +555,35 @@ under the License.
       </properties>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-clean-plugin</artifactId>
+            <!--
+            This is necessary if "mvn site" has been invoked previously with 3.x
+            and leaves 0-byte files in the local repository for MRM Maven Plugin
+            to serve which are broken from a consumer's PoV.
+            -->
+            <executions>
+              <execution>
+                <id>delete-0-byte-site-descriptors</id>
+                <goals>
+                  <goal>clean</goal>
+                </goals>
+                <phase>pre-integration-test</phase>
+                <configuration>
+                  <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                  <filesets>
+                    <fileset>
+                      <directory>${settings.localRepository}/org/apache/apache</directory>
+                      <includes>
+                        <include>**/*-site*.xml</include>
+                      </includes>
+                    </fileset>
+                  </filesets>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-invoker-plugin</artifactId>

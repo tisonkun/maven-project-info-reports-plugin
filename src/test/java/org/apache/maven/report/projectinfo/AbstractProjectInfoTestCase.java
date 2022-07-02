@@ -20,9 +20,16 @@ package org.apache.maven.report.projectinfo;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Locale;
+import java.util.Collections;
+import java.util.List;
 
+import com.meterware.httpunit.HttpUnitOptions;
+import org.apache.maven.doxia.tools.SiteTool;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.LegacySupport;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.ArtifactStubFactory;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
@@ -48,11 +55,6 @@ public abstract class AbstractProjectInfoTestCase extends AbstractMojoTestCase {
     private ArtifactStubFactory artifactStubFactory;
 
     /**
-     * The default locale is English.
-     */
-    protected static final Locale DEFAULT_LOCALE = Locale.ENGLISH;
-
-    /**
      * The current project to be test.
      */
     private MavenProject testMavenProject;
@@ -67,14 +69,13 @@ public abstract class AbstractProjectInfoTestCase extends AbstractMojoTestCase {
         // required for mojo lookups to work
         super.setUp();
 
+        HttpUnitOptions.setScriptingEnabled(false);
+
         i18n = getContainer().lookup(I18N.class);
         setVariableValueToObject(i18n, "defaultBundleName", "project-info-reports");
 
         artifactStubFactory = new DependencyArtifactStubFactory(getTestFile("target"), true, false);
         artifactStubFactory.getWorkingDir().mkdirs();
-
-        // Set the default Locale
-        Locale.setDefault(DEFAULT_LOCALE);
     }
 
     @Override
@@ -93,7 +94,7 @@ public abstract class AbstractProjectInfoTestCase extends AbstractMojoTestCase {
             throw new IllegalArgumentException("The key cannot be empty");
         }
 
-        return i18n.getString(key, Locale.getDefault()).trim();
+        return i18n.getString(key, SiteTool.DEFAULT_LOCALE).trim();
     }
 
     /**
@@ -138,7 +139,7 @@ public abstract class AbstractProjectInfoTestCase extends AbstractMojoTestCase {
 
         File report = new File(outputDirectory, name);
         if (!report.exists()) {
-            throw new IOException("File not found. Attempted :" + report);
+            throw new IOException("File not found. Attempted: " + report);
         }
 
         return report;
@@ -160,7 +161,7 @@ public abstract class AbstractProjectInfoTestCase extends AbstractMojoTestCase {
 
     protected AbstractProjectInfoReport createReportMojo(String goal, File pluginXmlFile) throws Exception {
         AbstractProjectInfoReport mojo = (AbstractProjectInfoReport) lookupMojo(goal, pluginXmlFile);
-        assertNotNull("Mojo found.", mojo);
+        assertNotNull("Mojo not found.", mojo);
 
         LegacySupport legacySupport = lookup(LegacySupport.class);
         legacySupport.setSession(newMavenSession(new MavenProjectStub()));
@@ -169,9 +170,19 @@ public abstract class AbstractProjectInfoTestCase extends AbstractMojoTestCase {
         repoSession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
                 .newInstance(repoSession, new LocalRepository(artifactStubFactory.getWorkingDir())));
 
+        List<MavenProject> reactorProjects =
+                mojo.getReactorProjects() != null ? mojo.getReactorProjects() : Collections.emptyList();
+
+        setVariableValueToObject(mojo, "mojoExecution", getMockMojoExecution());
         setVariableValueToObject(mojo, "session", legacySupport.getSession());
+        setVariableValueToObject(mojo, "repoSession", legacySupport.getRepositorySession());
+        setVariableValueToObject(mojo, "reactorProjects", reactorProjects);
+        setVariableValueToObject(
+                mojo, "remoteProjectRepositories", mojo.getProject().getRemoteProjectRepositories());
         setVariableValueToObject(mojo, "remoteRepositories", mojo.getProject().getRemoteArtifactRepositories());
         setVariableValueToObject(mojo, "pluginRepositories", mojo.getProject().getPluginArtifactRepositories());
+        setVariableValueToObject(
+                mojo, "siteDirectory", new File(mojo.getProject().getBasedir(), "src/site"));
         return mojo;
     }
 
@@ -190,4 +201,22 @@ public abstract class AbstractProjectInfoTestCase extends AbstractMojoTestCase {
 
         return new File(outputDir, filename);
     }
+
+    private MojoExecution getMockMojoExecution() {
+        MojoDescriptor md = new MojoDescriptor();
+        md.setGoal(getGoal());
+
+        MojoExecution me = new MojoExecution(md);
+
+        PluginDescriptor pd = new PluginDescriptor();
+        Plugin p = new Plugin();
+        p.setGroupId("org.apache.maven.plugins");
+        p.setArtifactId("maven-project-info-reports-plugin");
+        pd.setPlugin(p);
+        md.setPluginDescriptor(pd);
+
+        return me;
+    }
+
+    protected abstract String getGoal();
 }
